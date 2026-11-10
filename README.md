@@ -1,7 +1,11 @@
-# SaudeCerta
+# SaúdeCerta
 
-Alunos: 
-Júlia Rodrigues
-Ludmila Johnston
-Marielli Macedo
-Ronaldo Ângelo
+### Disciplina: Desenvolvimento de Aplicações Multicamadas
+
+## Alunos
+
+- Júlia Rodrigues
+- Ludmila Johnston
+- Marielli Macedo
+- Ronaldo Ângelo
+
