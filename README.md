@@ -1,5 +1,6 @@
 # SaúdeCerta
 
+HEAD
 Sistema de gestão de clínica usado como estudo de caso da disciplina **Desenvolvimento de Aplicações Multicamadas** (IFPA, 2026.2, turma da noite).
 
 É uma aplicação completa e pequena: API REST em Java/Spring Boot, banco relacional e interface web. Ela funciona, mas está **incompleta de propósito**: quatro funcionalidades respondem "missão pendente" e esperam pela sua equipe.
@@ -63,3 +64,14 @@ src/main/resources/static/   interface web
 src/test/java/               testes de domínio, de arquitetura e de integração
 docs/                        arquitetura, ADRs, rastreabilidade, requisições prontas
 ```
+=======
+### Disciplina: Desenvolvimento de Aplicações Multicamadas
+
+## Alunos
+
+- Júlia Rodrigues
+- Ludmila Johnston
+- Marielli Macedo
+- Ronaldo Ângelo
+
+ d5285f1da7293165c7c0ee2b0e644164b3991f89
