@@ -116,4 +116,126 @@ class ConsultaTest {
         emAtendimento.iniciarAtendimento();
         assertThatThrownBy(() -> emAtendimento.cancelar("Tarde demais")).isInstanceOf(RegraDeNegocioException.class);
     }
+    @Test
+@DisplayName("permite remarcar consulta agendada")
+void remarcaAgendada() {
+    Consulta consulta = consultaAs(10, 0);
+    LocalDateTime novoInicio = AGORA.withHour(14);
+
+    consulta.remarcar(novoInicio, AGORA);
+
+    assertThat(consulta.getInicio()).isEqualTo(novoInicio);
+    assertThat(consulta.getStatus()).isEqualTo(StatusConsulta.AGENDADA);
+    assertThat(consulta.getPacienteId()).isEqualTo(1L);
+    assertThat(consulta.getProfissionalId()).isEqualTo(10L);
+}
+
+@Test
+@DisplayName("consulta confirmada volta para AGENDADA ao remarcar")
+void remarcaConfirmada() {
+    Consulta consulta = consultaAs(10, 0);
+    consulta.confirmarChegada();
+
+    consulta.remarcar(AGORA.withHour(14), AGORA);
+
+    assertThat(consulta.getInicio()).isEqualTo(AGORA.withHour(14));
+    assertThat(consulta.getStatus()).isEqualTo(StatusConsulta.AGENDADA);
+}
+
+@Test
+@DisplayName("nao remarca consulta cancelada")
+void naoRemarcaCancelada() {
+    Consulta consulta = consultaAs(10, 0);
+    consulta.cancelar("Paciente desistiu");
+
+    assertThatThrownBy(() ->
+            consulta.remarcar(AGORA.withHour(14), AGORA))
+            .isInstanceOf(RegraDeNegocioException.class);
+}
+
+@Test
+@DisplayName("nao remarca consulta em atendimento")
+void naoRemarcaEmAtendimento() {
+    Consulta consulta = consultaAs(10, 0);
+    consulta.confirmarChegada();
+    consulta.iniciarAtendimento();
+
+    assertThatThrownBy(() ->
+            consulta.remarcar(AGORA.withHour(14), AGORA))
+            .isInstanceOf(RegraDeNegocioException.class);
+}
+
+@Test
+@DisplayName("nao remarca consulta realizada")
+void naoRemarcaRealizada() {
+    Consulta consulta = consultaAs(10, 0);
+    consulta.confirmarChegada();
+    consulta.iniciarAtendimento();
+    consulta.concluir();
+
+    assertThatThrownBy(() ->
+            consulta.remarcar(AGORA.withHour(14), AGORA))
+            .isInstanceOf(RegraDeNegocioException.class);
+}
+
+@Test
+@DisplayName("nao remarca para horario passado ou atual")
+void naoRemarcaPassado() {
+    Consulta consulta = consultaAs(10, 0);
+
+    assertThatThrownBy(() ->
+            consulta.remarcar(AGORA.minusMinutes(30), AGORA))
+            .isInstanceOf(RegraDeNegocioException.class);
+
+    assertThatThrownBy(() ->
+            consulta.remarcar(AGORA, AGORA))
+            .isInstanceOf(RegraDeNegocioException.class);
+
+    assertThat(consulta.getInicio()).isEqualTo(AGORA.withHour(10));
+}
+
+@Test
+@DisplayName("nao remarca fora da grade de 30 minutos")
+void naoRemarcaHorarioQuebrado() {
+    Consulta consulta = consultaAs(10, 0);
+
+    assertThatThrownBy(() ->
+            consulta.remarcar(AGORA.withHour(14).withMinute(15), AGORA))
+            .isInstanceOf(RegraDeNegocioException.class);
+}
+
+@Test
+@DisplayName("nao remarca fora do expediente")
+void naoRemarcaForaDoExpediente() {
+    Consulta consulta = consultaAs(10, 0);
+
+    assertThatThrownBy(() ->
+            consulta.remarcar(AGORA.withHour(19), AGORA))
+            .isInstanceOf(RegraDeNegocioException.class);
+
+    assertThatThrownBy(() ->
+            consulta.remarcar(AGORA.plusDays(1).withHour(6), AGORA))
+            .isInstanceOf(RegraDeNegocioException.class);
+}
+
+@Test
+@DisplayName("nao remarca aos domingos")
+void naoRemarcaDomingo() {
+    Consulta consulta = consultaAs(10, 0);
+    LocalDateTime domingo = LocalDateTime.of(2026, 11, 22, 14, 0);
+
+    assertThatThrownBy(() ->
+            consulta.remarcar(domingo, AGORA))
+            .isInstanceOf(RegraDeNegocioException.class);
+}
+
+@Test
+@DisplayName("nao remarca sem informar novo horario")
+void naoRemarcaHorarioNulo() {
+    Consulta consulta = consultaAs(10, 0);
+
+    assertThatThrownBy(() ->
+            consulta.remarcar(null, AGORA))
+            .isInstanceOf(RegraDeNegocioException.class);
+}
 }

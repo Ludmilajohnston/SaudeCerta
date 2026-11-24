@@ -20,7 +20,7 @@ Requisito → decisão → componente/tática → como se verifica. Ao concluir 
 | RF12 | Finalizar atendimento, que passa a ser imutável | `Atendimento.finalizar` | `AtendimentoTest.finalizadoEhImutavel` |
 | RF13 | Consultar o histórico clínico do paciente | `ProntuarioService.doPaciente` | `FluxoDaClinicaTest.prontuarioRestritoAProfissionais` |
 | RF14 | Consultar a trilha de auditoria | `AuditoriaController`, `AuditoriaService` | `FluxoDaClinicaTest.leituraDeProntuarioEhAuditada` |
-| RF15 | Remarcar consulta | missão E3-1 | — |
+| RF15 | Remarcar consulta sem conflito de horário, preservando sua identidade e registrando a alteração na auditoria | ADR 0007; `Consulta.remarcar`, `AgendaService.remarcar`, `AgendaController`, `ConsultaRepositorioJpa`, `AuditoriaService`, `agenda.js` | `ConsultaTest`; `FluxoDaClinicaTest.remarcaConsultaEAudita`; `FluxoDaClinicaTest.remarcacaoRecusaConflitoProfissional`; `FluxoDaClinicaTest.remarcacaoRecusaConflitoPaciente`; `FluxoDaClinicaTest.remarcaConsultaConfirmada`; teste manual da interface |
 | RF16 | Prescrever medicamentos | missão E3-2 | `PrescricaoTest` (desativado) |
 | RF17 | Relatórios de consultas | missão E3-3 | — |
 | RF18 | Portal do paciente | missão E3-4 | — |
@@ -36,6 +36,6 @@ Requisito → decisão → componente/tática → como se verifica. Ao concluir 
 | RNF05 | Regras de negócio testáveis sem infraestrutura | ADR 0002 | domínio puro; portas e adaptadores | `ArquiteturaTest.dominio_nao_conhece_framework...`; testes de domínio |
 | RNF06 | Busca de paciente e abertura de prontuário em menos de 2 s | — | consultas simples; junção de nomes em lote (`AgendaService.detalhar`) | Raio-X (medição manual). **Lacuna:** não há teste automatizado de desempenho |
 | RNF07 | Agenda disponível no horário da clínica | — | **Lacuna:** processo único, banco em memória | discutir em aula; relacionar com PF-1 |
-| RNF08 | Recepção opera com poucos cliques | — | agendar a partir da própria grade | roteiro, etapa 3 |
+| RNF08 | Recepção opera com poucos cliques | ADR 0007 (remarcação) | Agendamento a partir da grade e remarcação por formulário com horários disponíveis | roteiro, etapa 3; teste manual da interface da missão E3-1 |
 
 As lacunas estão registradas de propósito: uma matriz honesta mostra também o que ainda não é atendido.

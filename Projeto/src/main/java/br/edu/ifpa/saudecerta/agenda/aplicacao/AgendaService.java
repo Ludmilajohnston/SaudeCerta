@@ -10,7 +10,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
-
+import java.time.DayOfWeek;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -23,7 +23,6 @@ import br.edu.ifpa.saudecerta.cadastro.api.CadastroFachada;
 import br.edu.ifpa.saudecerta.cadastro.api.PacienteResumo;
 import br.edu.ifpa.saudecerta.cadastro.api.ProfissionalResumo;
 import br.edu.ifpa.saudecerta.compartilhado.erro.ConflitoException;
-import br.edu.ifpa.saudecerta.compartilhado.erro.MissaoPendenteException;
 import br.edu.ifpa.saudecerta.compartilhado.erro.RecursoNaoEncontradoException;
 import br.edu.ifpa.saudecerta.compartilhado.erro.RegraDeNegocioException;
 import br.edu.ifpa.saudecerta.seguranca.api.UsuarioLogado;
@@ -90,14 +89,58 @@ public class AgendaService implements AgendaFachada {
         return detalhar(List.of(salva)).get(0);
     }
 
-    /** MISSAO E3-1: remarcar uma consulta para outro horario. */
-    public ConsultaInfo remarcar(Long id, LocalDateTime novoInicio, UsuarioLogado quem) {
-        throw new MissaoPendenteException("E3-1",
-                "Remarcação ainda não implementada. Veja a missão E3-1 em MISSOES.md.");
+    /** Remarca uma consulta, verificando conflitos e registrando a auditoria. */
+public ConsultaInfo remarcar(Long id, LocalDateTime novoInicio, UsuarioLogado quem) {
+
+    Consulta consulta = obter(id);
+
+    LocalDateTime inicioAnterior = consulta.getInicio();
+
+    // Aplica as regras de negócio do domínio.
+    consulta.remarcar(novoInicio, LocalDateTime.now(relogio));
+
+    LocalDate dia = consulta.getInicio().toLocalDate();
+
+    // Verifica conflitos na agenda do profissional.
+    boolean conflitoProfissional = consultas
+            .doProfissionalNoDia(consulta.getProfissionalId(), dia)
+            .stream()
+            .filter(outra -> !id.equals(outra.getId()))
+            .anyMatch(consulta::conflitaCom);
+
+    if (conflitoProfissional) {
+        throw new ConflitoException(
+                "O profissional já tem consulta nesse horário.");
     }
+
+    // Verifica conflitos na agenda do paciente.
+    boolean conflitoPaciente = consultas
+            .doPacienteNoDia(consulta.getPacienteId(), dia)
+            .stream()
+            .filter(outra -> !id.equals(outra.getId()))
+            .anyMatch(consulta::conflitaCom);
+
+    if (conflitoPaciente) {
+        throw new ConflitoException(
+                "O paciente já tem outra consulta nesse horário.");
+    }
+
+    // Persiste a consulta com o novo horário.
+    Consulta salva = consultas.salvar(consulta);
+
+    // Registra o horário anterior e o novo na auditoria.
+    auditar(quem, "CONSULTA_REMARCADA", salva,
+            "Horário anterior: " + inicioAnterior
+                    + " | Novo horário: " + salva.getInicio());
+
+    return detalhar(List.of(salva)).get(0);
+}
 
     /** Horarios ainda vagos de um profissional em um dia (grade de 30 minutos). */
     public List<LocalTime> horariosLivres(Long profissionalId, LocalDate data) {
+        if (data.getDayOfWeek() == DayOfWeek.SUNDAY) {
+    return List.of();
+}
         Set<LocalTime> ocupados = consultas.doProfissionalNoDia(profissionalId, data).stream()
                 .filter(Consulta::ocupaHorario)
                 .map(c -> c.getInicio().toLocalTime())
