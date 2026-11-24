@@ -3,13 +3,17 @@ package br.edu.ifpa.saudecerta.painel.aplicacao;
 import java.time.Clock;
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Map;
+import java.util.TreeMap;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 import org.springframework.stereotype.Service;
 
 import br.edu.ifpa.saudecerta.agenda.api.AgendaFachada;
 import br.edu.ifpa.saudecerta.agenda.api.ConsultaInfo;
 import br.edu.ifpa.saudecerta.cadastro.api.CadastroFachada;
-import br.edu.ifpa.saudecerta.compartilhado.erro.MissaoPendenteException;
+import br.edu.ifpa.saudecerta.painel.dominio.PeriodoDoRelatorio;
 import br.edu.ifpa.saudecerta.seguranca.api.Perfil;
 import br.edu.ifpa.saudecerta.seguranca.api.UsuarioLogado;
 
@@ -41,9 +45,22 @@ public class PainelService {
                 cadastro.totalDePacientesAtivos(), cadastro.profissionaisAtivos().size(), consultas);
     }
 
-    /** MISSAO E3-3: relatorios de consultas por periodo, profissional e especialidade. */
-    public Object relatorioDeConsultas(LocalDate de, LocalDate ate) {
-        throw new MissaoPendenteException("E3-3", "Relatórios ainda não implementados. Veja a missão E3-3 em MISSOES.md.");
+    /**
+     * E3-3: totais de consultas por situacao, profissional e especialidade no periodo.
+     * Os dados vem pela AgendaFachada: o painel nao acessa a persistencia da agenda.
+     * Agregacao feita em memoria (ver ADR do relatorio).
+     */
+    public RelatorioDeConsultas relatorioDeConsultas(LocalDate de, LocalDate ate) {
+        PeriodoDoRelatorio periodo = new PeriodoDoRelatorio(de, ate);
+        List<ConsultaInfo> consultas = agenda.consultasDoPeriodo(periodo.de(), periodo.ate());
+        return new RelatorioDeConsultas(periodo.de(), periodo.ate(), consultas.size(),
+                agrupar(consultas, ConsultaInfo::status),
+                agrupar(consultas, ConsultaInfo::profissional),
+                agrupar(consultas, c -> c.especialidade() == null ? "(sem especialidade)" : c.especialidade()));
+    }
+
+    private static Map<String, Long> agrupar(List<ConsultaInfo> consultas, Function<ConsultaInfo, String> chave) {
+        return consultas.stream().collect(Collectors.groupingBy(chave, TreeMap::new, Collectors.counting()));
     }
 
     private static int contar(List<ConsultaInfo> consultas, String status) {

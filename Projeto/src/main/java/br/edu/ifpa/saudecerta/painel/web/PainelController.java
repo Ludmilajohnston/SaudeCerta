@@ -12,6 +12,7 @@ import org.springframework.web.bind.annotation.RestController;
 import br.edu.ifpa.saudecerta.compartilhado.erro.MissaoPendenteException;
 import br.edu.ifpa.saudecerta.painel.aplicacao.PainelDoDia;
 import br.edu.ifpa.saudecerta.painel.aplicacao.PainelService;
+import br.edu.ifpa.saudecerta.painel.aplicacao.RelatorioDeConsultas;
 import br.edu.ifpa.saudecerta.seguranca.api.UsuarioAtual;
 
 @RestController
@@ -28,9 +29,9 @@ public class PainelController {
         return painel.hoje(UsuarioAtual.de(token));
     }
 
-    /** MISSAO E3-3. */
+    /** E3-3: totais de consultas por situacao, profissional e especialidade no periodo. */
     @GetMapping("/api/relatorios/consultas")
-    public Object relatorio(@RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate de,
+    public RelatorioDeConsultas relatorio(@RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate de,
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate ate) {
         return painel.relatorioDeConsultas(de, ate);
     }

@@ -9,6 +9,7 @@ import { telaAgenda } from './telas/agenda.js';
 import { telaPacientes } from './telas/pacientes.js';
 import { telaProntuario, telaAtendimento } from './telas/prontuario.js';
 import { telaProfissionais } from './telas/profissionais.js';
+import { telaRelatorios } from './telas/relatorios.js';
 import { telaAuditoria } from './telas/auditoria.js';
 import { telaMissao } from './telas/missao.js';
 
@@ -21,7 +22,7 @@ const ROTAS = [
   { caminho: 'pacientes', titulo: 'Pacientes', perfis: ['ADMIN', 'RECEPCAO', 'PROFISSIONAL'], tela: telaPacientes },
   { caminho: 'profissionais', titulo: 'Profissionais', perfis: ['ADMIN'], tela: telaProfissionais },
   { caminho: 'auditoria', titulo: 'Auditoria', perfis: ['ADMIN'], tela: telaAuditoria },
-  { caminho: 'relatorios', titulo: 'Relatórios', perfis: ['ADMIN'], missao: 'E3-3', tela: (area) => telaMissao(area, 'E3-3') },
+ { caminho: 'relatorios', titulo: 'Relatórios', perfis: ['ADMIN'], tela: (area) => telaRelatorios(area) },
   { caminho: 'portal', titulo: 'Minhas consultas', perfis: ['PACIENTE'], missao: 'E3-4', tela: (area) => telaMissao(area, 'E3-4') },
   // Rotas sem item de menu
   { caminho: 'prontuario', perfis: ['PROFISSIONAL'], tela: telaProntuario },

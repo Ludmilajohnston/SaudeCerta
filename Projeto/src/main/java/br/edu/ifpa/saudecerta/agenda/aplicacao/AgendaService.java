@@ -90,57 +90,57 @@ public class AgendaService implements AgendaFachada {
     }
 
     /** Remarca uma consulta, verificando conflitos e registrando a auditoria. */
-public ConsultaInfo remarcar(Long id, LocalDateTime novoInicio, UsuarioLogado quem) {
+    public ConsultaInfo remarcar(Long id, LocalDateTime novoInicio, UsuarioLogado quem) {
 
-    Consulta consulta = obter(id);
+        Consulta consulta = obter(id);
 
-    LocalDateTime inicioAnterior = consulta.getInicio();
+        LocalDateTime inicioAnterior = consulta.getInicio();
 
-    // Aplica as regras de negócio do domínio.
-    consulta.remarcar(novoInicio, LocalDateTime.now(relogio));
+        // Aplica as regras de negócio do domínio.
+        consulta.remarcar(novoInicio, LocalDateTime.now(relogio));
 
-    LocalDate dia = consulta.getInicio().toLocalDate();
+        LocalDate dia = consulta.getInicio().toLocalDate();
 
-    // Verifica conflitos na agenda do profissional.
-    boolean conflitoProfissional = consultas
-            .doProfissionalNoDia(consulta.getProfissionalId(), dia)
-            .stream()
-            .filter(outra -> !id.equals(outra.getId()))
-            .anyMatch(consulta::conflitaCom);
+        // Verifica conflitos na agenda do profissional.
+        boolean conflitoProfissional = consultas
+                .doProfissionalNoDia(consulta.getProfissionalId(), dia)
+                .stream()
+                .filter(outra -> !id.equals(outra.getId()))
+                .anyMatch(consulta::conflitaCom);
 
-    if (conflitoProfissional) {
-        throw new ConflitoException(
-                "O profissional já tem consulta nesse horário.");
+        if (conflitoProfissional) {
+            throw new ConflitoException(
+                    "O profissional já tem consulta nesse horário.");
+        }
+
+        // Verifica conflitos na agenda do paciente.
+        boolean conflitoPaciente = consultas
+                .doPacienteNoDia(consulta.getPacienteId(), dia)
+                .stream()
+                .filter(outra -> !id.equals(outra.getId()))
+                .anyMatch(consulta::conflitaCom);
+
+        if (conflitoPaciente) {
+            throw new ConflitoException(
+                    "O paciente já tem outra consulta nesse horário.");
+        }
+
+        // Persiste a consulta com o novo horário.
+        Consulta salva = consultas.salvar(consulta);
+
+        // Registra o horário anterior e o novo na auditoria.
+        auditar(quem, "CONSULTA_REMARCADA", salva,
+                "Horário anterior: " + inicioAnterior
+                        + " | Novo horário: " + salva.getInicio());
+
+        return detalhar(List.of(salva)).get(0);
     }
-
-    // Verifica conflitos na agenda do paciente.
-    boolean conflitoPaciente = consultas
-            .doPacienteNoDia(consulta.getPacienteId(), dia)
-            .stream()
-            .filter(outra -> !id.equals(outra.getId()))
-            .anyMatch(consulta::conflitaCom);
-
-    if (conflitoPaciente) {
-        throw new ConflitoException(
-                "O paciente já tem outra consulta nesse horário.");
-    }
-
-    // Persiste a consulta com o novo horário.
-    Consulta salva = consultas.salvar(consulta);
-
-    // Registra o horário anterior e o novo na auditoria.
-    auditar(quem, "CONSULTA_REMARCADA", salva,
-            "Horário anterior: " + inicioAnterior
-                    + " | Novo horário: " + salva.getInicio());
-
-    return detalhar(List.of(salva)).get(0);
-}
 
     /** Horarios ainda vagos de um profissional em um dia (grade de 30 minutos). */
     public List<LocalTime> horariosLivres(Long profissionalId, LocalDate data) {
         if (data.getDayOfWeek() == DayOfWeek.SUNDAY) {
-    return List.of();
-}
+            return List.of();
+        }
         Set<LocalTime> ocupados = consultas.doProfissionalNoDia(profissionalId, data).stream()
                 .filter(Consulta::ocupaHorario)
                 .map(c -> c.getInicio().toLocalTime())
@@ -169,6 +169,12 @@ public ConsultaInfo remarcar(Long id, LocalDateTime novoInicio, UsuarioLogado qu
                 ? consultas.doDia(data)
                 : consultas.doProfissionalNoDia(profissionalId, data);
         return detalhar(doDia);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<ConsultaInfo> consultasDoPeriodo(LocalDate de, LocalDate ate) {
+        return detalhar(consultas.doPeriodo(de, ate));
     }
 
     @Override

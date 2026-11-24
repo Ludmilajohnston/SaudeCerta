@@ -21,4 +21,7 @@ public interface ConsultaRepositorio {
     List<Consulta> doProfissionalNoDia(Long profissionalId, LocalDate data);
 
     List<Consulta> doPacienteNoDia(Long pacienteId, LocalDate data);
+
+    /** Todas as consultas entre as duas datas (inclusive). Usado pelos relatorios. */
+    List<Consulta> doPeriodo(LocalDate de, LocalDate ate);
 }
