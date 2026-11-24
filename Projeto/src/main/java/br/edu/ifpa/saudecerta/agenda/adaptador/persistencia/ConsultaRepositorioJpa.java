@@ -53,4 +53,10 @@ public class ConsultaRepositorioJpa implements ConsultaRepositorio {
         return jpa.findByInicioBetweenOrderByInicio(de.atStartOfDay(), ate.atTime(LocalTime.MAX)).stream()
                 .map(ConsultaJpa::paraDominio).toList();
     }
+
+    @Override
+    public List<Consulta> doPaciente(Long pacienteId) {
+        return jpa.findByPacienteIdOrderByInicio(pacienteId).stream()
+                .map(ConsultaJpa::paraDominio).toList();
+    }
 }

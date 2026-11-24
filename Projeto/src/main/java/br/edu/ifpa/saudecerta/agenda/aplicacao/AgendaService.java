@@ -178,6 +178,12 @@ public class AgendaService implements AgendaFachada {
     }
 
     @Override
+    @Transactional(readOnly = true)
+    public List<ConsultaInfo> consultasDoPaciente(Long pacienteId) {
+        return detalhar(consultas.doPaciente(pacienteId));
+    }
+
+    @Override
     public void iniciarAtendimento(Long consultaId) {
         Consulta consulta = obter(consultaId);
         consulta.iniciarAtendimento();
