@@ -111,6 +111,7 @@ export const api = {
   auditoria: (pacienteId) => chamar('GET', `/api/auditoria${consulta({ pacienteId })}`),
   relatorioDeConsultas: (de, ate) => chamar('GET', `/api/relatorios/consultas${consulta({ de, ate })}`),
   minhasConsultas: () => chamar('GET', '/api/portal/consultas'),
+  cancelarMinhaConsulta: (id, motivo) => chamar('POST', `/api/portal/consultas/${id}/cancelamento`, { motivo }),
 
   rastro: (id) => chamar('GET', `/api/raio-x/${id}`),
 };
