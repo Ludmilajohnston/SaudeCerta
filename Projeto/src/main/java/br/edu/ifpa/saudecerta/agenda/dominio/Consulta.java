@@ -20,7 +20,7 @@ public class Consulta {
     private final Long id;
     private final Long pacienteId;
     private final Long profissionalId;
-   private LocalDateTime inicio;
+    private LocalDateTime inicio;
     private final int duracaoMinutos;
     private StatusConsulta status;
     private final String observacao;
@@ -39,53 +39,53 @@ public class Consulta {
     }
 
     /** Cria uma nova consulta, validando as regras de horario da clinica. */
-   public static Consulta agendar(Long pacienteId, Long profissionalId,
-        LocalDateTime inicio, String observacao, LocalDateTime agora) {
+    public static Consulta agendar(Long pacienteId, Long profissionalId,
+            LocalDateTime inicio, String observacao, LocalDateTime agora) {
 
-    if (pacienteId == null || profissionalId == null || inicio == null) {
-        throw new RegraDeNegocioException(
-                "Paciente, profissional e horário são obrigatórios.");
+        if (pacienteId == null || profissionalId == null || inicio == null) {
+            throw new RegraDeNegocioException(
+                    "Paciente, profissional e horário são obrigatórios.");
+        }
+
+        validarHorario(inicio, agora);
+
+        return new Consulta(null, pacienteId, profissionalId, inicio,
+                DURACAO_MINUTOS, StatusConsulta.AGENDADA, observacao, null);
     }
 
-    validarHorario(inicio, agora);
+    private static void validarHorario(LocalDateTime inicio, LocalDateTime agora) {
 
-    return new Consulta(null, pacienteId, profissionalId, inicio,
-            DURACAO_MINUTOS, StatusConsulta.AGENDADA, observacao, null);
-}
+        if (inicio == null) {
+            throw new RegraDeNegocioException("Informe o horário da consulta.");
+        }
 
-private static void validarHorario(LocalDateTime inicio, LocalDateTime agora) {
+        if (!inicio.isAfter(agora)) {
+            throw new RegraDeNegocioException(
+                    "Não é possível agendar em um horário que já passou.");
+        }
 
-    if (inicio == null) {
-        throw new RegraDeNegocioException("Informe o horário da consulta.");
+        if (inicio.getDayOfWeek() == DayOfWeek.SUNDAY) {
+            throw new RegraDeNegocioException(
+                    "A clínica não atende aos domingos.");
+        }
+
+        if (inicio.getMinute() % DURACAO_MINUTOS != 0
+                || inicio.getSecond() != 0
+                || inicio.getNano() != 0) {
+
+            throw new RegraDeNegocioException(
+                    "As consultas começam em horários cheios ou meia hora (ex.: 08:00, 08:30).");
+        }
+
+        LocalTime hora = inicio.toLocalTime();
+
+        if (hora.isBefore(ABERTURA)
+                || hora.plusMinutes(DURACAO_MINUTOS).isAfter(FECHAMENTO)) {
+
+            throw new RegraDeNegocioException(
+                    "Horário fora do funcionamento da clínica (07:00 às 19:00).");
+        }
     }
-
-    if (!inicio.isAfter(agora)) {
-        throw new RegraDeNegocioException(
-                "Não é possível agendar em um horário que já passou.");
-    }
-
-    if (inicio.getDayOfWeek() == DayOfWeek.SUNDAY) {
-        throw new RegraDeNegocioException(
-                "A clínica não atende aos domingos.");
-    }
-
-    if (inicio.getMinute() % DURACAO_MINUTOS != 0
-            || inicio.getSecond() != 0
-            || inicio.getNano() != 0) {
-
-        throw new RegraDeNegocioException(
-                "As consultas começam em horários cheios ou meia hora (ex.: 08:00, 08:30).");
-    }
-
-    LocalTime hora = inicio.toLocalTime();
-
-    if (hora.isBefore(ABERTURA)
-            || hora.plusMinutes(DURACAO_MINUTOS).isAfter(FECHAMENTO)) {
-
-        throw new RegraDeNegocioException(
-                "Horário fora do funcionamento da clínica (07:00 às 19:00).");
-    }
-}
 
     /** Recria uma consulta ja existente (uso exclusivo da persistencia). Nao valida regras de criacao. */
     public static Consulta reconstituir(Long id, Long pacienteId, Long profissionalId, LocalDateTime inicio,
@@ -136,23 +136,42 @@ private static void validarHorario(LocalDateTime inicio, LocalDateTime agora) {
         status = StatusConsulta.CANCELADA;
         motivoCancelamento = motivo.trim();
     }
-        
-    /** Altera o horário da consulta, preservando sua identidade. */
-public void remarcar(LocalDateTime novoInicio, LocalDateTime agora) {
 
-    if (status != StatusConsulta.AGENDADA
-            && status != StatusConsulta.CONFIRMADA) {
-
-        throw new RegraDeNegocioException(
-                "Esta consulta não pode ser remarcada (situação: "
-                        + status + ").");
+    /** O paciente so enxerga e mexe nas proprias consultas (E3-4). */
+    public boolean pertenceA(Long paciente) {
+        return paciente != null && paciente.equals(pacienteId);
     }
 
-    validarHorario(novoInicio, agora);
+    /** Pelo portal, o paciente so cancela consulta ainda ativa e que ainda nao aconteceu. */
+    public boolean podeSerCanceladaPeloPaciente(LocalDateTime agora) {
+        return (status == StatusConsulta.AGENDADA || status == StatusConsulta.CONFIRMADA)
+                && inicio.isAfter(agora);
+    }
 
-    this.inicio = novoInicio;
-    this.status = StatusConsulta.AGENDADA;
-}
+    /** Cancelamento feito pelo proprio paciente no portal (E3-4). */
+    public void cancelarPeloPaciente(String motivo, LocalDateTime agora) {
+        if (!inicio.isAfter(agora)) {
+            throw new RegraDeNegocioException("Pelo portal só é possível cancelar consultas futuras.");
+        }
+        cancelar(motivo);
+    }
+
+    /** Altera o horário da consulta, preservando sua identidade. */
+    public void remarcar(LocalDateTime novoInicio, LocalDateTime agora) {
+
+        if (status != StatusConsulta.AGENDADA
+                && status != StatusConsulta.CONFIRMADA) {
+
+            throw new RegraDeNegocioException(
+                    "Esta consulta não pode ser remarcada (situação: "
+                            + status + ").");
+        }
+
+        validarHorario(novoInicio, agora);
+
+        this.inicio = novoInicio;
+        this.status = StatusConsulta.AGENDADA;
+    }
 
     private void exigir(StatusConsulta esperado, String mensagem) {
         if (status != esperado) {
