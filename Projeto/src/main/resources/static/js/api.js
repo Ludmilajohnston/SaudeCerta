@@ -107,7 +107,7 @@ export const api = {
   registrarAtendimento: (id, registro) => chamar('PUT', `/api/atendimentos/${id}`, registro),
   finalizarAtendimento: (id) => chamar('POST', `/api/atendimentos/${id}/finalizacao`),
   prescricoes: (atendimentoId) => chamar('GET', `/api/atendimentos/${atendimentoId}/prescricoes`),
-
+  prescrever: (id, itens) => chamar('POST', `/api/atendimentos/${id}/prescricoes`, { itens }),
   auditoria: (pacienteId) => chamar('GET', `/api/auditoria${consulta({ pacienteId })}`),
   relatorioDeConsultas: (de, ate) => chamar('GET', `/api/relatorios/consultas${consulta({ de, ate })}`),
   minhasConsultas: () => chamar('GET', '/api/portal/consultas'),

@@ -121,14 +121,31 @@ class FluxoDaClinicaTest {
                 .contentType(MediaType.APPLICATION_JSON).content(outroPaciente))
                 .andExpect(status().isConflict());
     }
-
     @Test
-    @DisplayName("funcionalidades deixadas como missao respondem 501")
-    void missoesRespondem501() throws Exception {
-        mvc.perform(get("/api/atendimentos/1/prescricoes").header("Authorization", entrar("ana")))
-                .andExpect(status().isNotImplemented())
-                .andExpect(jsonPath("$.missao").value("E3-2"));
-    }
+@DisplayName("profissional pode consultar prescricoes")
+void consultaPrescricoes() throws Exception {
+    mvc.perform(get("/api/atendimentos/1/prescricoes")
+            .header("Authorization", entrar("ana")))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$").isArray());
+}
+
+@Test
+@DisplayName("administrador nao pode consultar prescricoes")
+void administradorNaoLePrescricoes() throws Exception {
+    mvc.perform(get("/api/atendimentos/1/prescricoes")
+            .header("Authorization", entrar("admin")))
+            .andExpect(status().isForbidden());
+}
+
+@Test
+@DisplayName("recepcao nao pode consultar prescricoes")
+void recepcaoNaoLePrescricoes() throws Exception {
+    mvc.perform(get("/api/atendimentos/1/prescricoes")
+            .header("Authorization", entrar("recepcao")))
+            .andExpect(status().isForbidden());
+}
+
     private long criarConsulta(
         String token,
         int pacienteId,
@@ -278,5 +295,206 @@ class FluxoDaClinicaTest {
                 .andExpect(jsonPath("$.id").value(id))
                 .andExpect(jsonPath("$.status").value("AGENDADA"));
     }
+    // TESTES DA MISSAO E3-2
 
+    private String pedidoPrescricao() throws Exception {
+        return json.writeValueAsString(Map.of(
+                "itens", java.util.List.of(Map.of(
+                        "medicamento", "Medicamento Teste",
+                        "dose", "Dose teste",
+                        "posologia", "Posologia teste"))));
+    }
+
+    @Test
+    @DisplayName("atendimento finalizado recusa prescricao com 422")
+    void atendimentoFinalizadoNaoPrescreve() throws Exception {
+
+        mvc.perform(post("/api/atendimentos/1/prescricoes")
+                .header("Authorization", entrar("ana"))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(pedidoPrescricao()))
+                .andExpect(status().isUnprocessableEntity());
+    }
+
+    @Test
+    @DisplayName("profissional nao responsavel recebe 403")
+    void outroProfissionalNaoPrescreve() throws Exception {
+
+        mvc.perform(post("/api/atendimentos/1/prescricoes")
+                .header("Authorization", entrar("rafael"))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(pedidoPrescricao()))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    @DisplayName("administrador nao pode emitir prescricao")
+    void administradorNaoPrescreve() throws Exception {
+
+        mvc.perform(post("/api/atendimentos/1/prescricoes")
+                .header("Authorization", entrar("admin"))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(pedidoPrescricao()))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    @DisplayName("recepcao nao pode emitir prescricao")
+    void recepcaoNaoPrescreve() throws Exception {
+
+        mvc.perform(post("/api/atendimentos/1/prescricoes")
+                .header("Authorization", entrar("recepcao"))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(pedidoPrescricao()))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    @DisplayName("leitura de prescricoes registra auditoria")
+    void leituraDePrescricaoEhAuditada() throws Exception {
+
+        mvc.perform(get("/api/atendimentos/1/prescricoes")
+                .header("Authorization", entrar("ana")))
+                .andExpect(status().isOk());
+
+        String corpo = mvc.perform(get("/api/auditoria")
+                .param("pacienteId", "1")
+                .header("Authorization", entrar("admin")))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+
+        boolean registrado = false;
+
+        for (JsonNode registro : json.readTree(corpo)) {
+
+            if ("PRESCRICAO_LIDA".equals(
+                    registro.path("acao").asText())
+                    && "ana".equals(
+                            registro.path("usuario").asText())) {
+
+                registrado = true;
+            }
+        }
+
+        assertThat(registrado).isTrue();
+    }
+        @Test
+    @DisplayName("E3-2: emissao, alergia, autorizacao, historico e auditoria")
+    void fluxoCompletoDePrescricao() throws Exception {
+
+        String ana = entrar("ana");
+        String rafael = entrar("rafael");
+        String admin = entrar("admin");
+
+        // Iniciar atendimento da Joana
+        String resposta = mvc.perform(post("/api/atendimentos")
+                .header("Authorization", ana)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(json.writeValueAsString(
+                        Map.of("consultaId", 8))))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+
+        long id = json.readTree(resposta).path("id").asLong();
+
+        assertThat(id).isPositive();
+
+        String endpoint = "/api/atendimentos/" + id + "/prescricoes";
+
+        // Outro profissional nao pode prescrever
+        mvc.perform(post(endpoint)
+                .header("Authorization", rafael)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(pedidoPrescricao()))
+                .andExpect(status().isForbidden());
+
+        // Recusar medicamento presente nos alertas
+        String alergia = json.writeValueAsString(Map.of(
+                "itens", java.util.List.of(Map.of(
+                        "medicamento", "Dipirona",
+                        "dose", "Dose teste",
+                        "posologia", "Posologia teste"))));
+
+        mvc.perform(post(endpoint)
+                .header("Authorization", ana)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(alergia))
+                .andExpect(status().isUnprocessableEntity());
+
+        // Emitir prescricao valida
+        mvc.perform(post(endpoint)
+                .header("Authorization", ana)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(pedidoPrescricao()))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.atendimentoId").value(id))
+                .andExpect(jsonPath("$.itens[0].medicamento")
+                        .value("Medicamento Teste"));
+
+        // Confirmar persistencia
+        mvc.perform(get(endpoint)
+                .header("Authorization", ana))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.length()").value(1))
+                .andExpect(jsonPath("$[0].itens[0].medicamento")
+                        .value("Medicamento Teste"));
+
+        // Confirmar historico
+        String historico = mvc.perform(
+                get("/api/pacientes/1/prontuario")
+                .header("Authorization", ana))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+
+        boolean encontrada = false;
+
+        for (JsonNode atendimento :
+                json.readTree(historico).path("atendimentos")) {
+
+            if (atendimento.path("id").asLong() == id) {
+                assertThat(atendimento.path("prescricoes").size())
+                        .isEqualTo(1);
+
+                assertThat(atendimento.path("prescricoes")
+                        .get(0).path("itens").get(0)
+                        .path("medicamento").asText())
+                        .isEqualTo("Medicamento Teste");
+
+                encontrada = true;
+            }
+        }
+
+        assertThat(encontrada).isTrue();
+
+        // Confirmar auditoria
+        String auditoria = mvc.perform(get("/api/auditoria")
+                .param("pacienteId", "1")
+                .header("Authorization", admin))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+
+        boolean emitiu = false;
+        boolean leu = false;
+
+        for (JsonNode registro : json.readTree(auditoria)) {
+
+            if (registro.path("recursoId").asLong() == id
+                    && "ana".equals(
+                            registro.path("usuario").asText())) {
+
+                String acao = registro.path("acao").asText();
+
+                if ("PRESCRICAO_EMITIDA".equals(acao)) {
+                    emitiu = true;
+                }
+
+                if ("PRESCRICAO_LIDA".equals(acao)) {
+                    leu = true;
+                }
+            }
+        }
+
+        assertThat(emitiu).isTrue();
+        assertThat(leu).isTrue();
+    }
 }

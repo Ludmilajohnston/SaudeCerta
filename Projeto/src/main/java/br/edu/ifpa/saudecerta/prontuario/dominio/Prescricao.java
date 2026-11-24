@@ -2,26 +2,14 @@ package br.edu.ifpa.saudecerta.prontuario.dominio;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
+import java.text.Normalizer;
+import java.util.regex.Pattern;
 
-import br.edu.ifpa.saudecerta.compartilhado.erro.MissaoPendenteException;
+import br.edu.ifpa.saudecerta.compartilhado.erro.RegraDeNegocioException;
 
-/**
- * MISSAO E3-2 - Prescricao vinculada a um atendimento.
- *
- * Este esqueleto existe para a equipe completar. O comportamento esperado esta
- * descrito, como teste, em PrescricaoTest (hoje desativado com @Disabled).
- * Caminho sugerido: reative o teste, veja-o falhar, implemente ate passar.
- *
- * Regras a implementar:
- *  1. uma prescricao tem pelo menos um item;
- *  2. cada item tem medicamento, dose e posologia, todos obrigatorios;
- *  3. o mesmo medicamento nao aparece duas vezes na mesma prescricao;
- *  4. se o paciente tem alerta de alergia que cita o medicamento, a prescricao
- *     e recusada (RegraDeNegocioException) - os alertas vem do cadastro.
- */
 public class Prescricao {
 
-    /** Um medicamento prescrito. */
     public record Item(String medicamento, String dose, String posologia) {
     }
 
@@ -33,13 +21,74 @@ public class Prescricao {
     }
 
     public void adicionar(Item item, String alertasDoPaciente) {
-        throw new MissaoPendenteException("E3-2", "Prescrição ainda não implementada. Veja a missão E3-2 em MISSOES.md.");
+
+        if (item == null
+                || vazio(item.medicamento())
+                || vazio(item.dose())
+                || vazio(item.posologia())) {
+
+            throw new RegraDeNegocioException(
+                    "Informe o medicamento, a dose e a posologia.");
+        }
+
+        String medicamento = normalizar(item.medicamento());
+
+        boolean repetido = itens.stream()
+                .anyMatch(i -> normalizar(i.medicamento())
+                        .equals(medicamento));
+
+        if (repetido) {
+            throw new RegraDeNegocioException(
+                    "Este medicamento já está na prescrição.");
+        }
+
+        if (!vazio(alertasDoPaciente)) {
+
+            String alertas = normalizar(alertasDoPaciente);
+
+            String nomeMedicamento = medicamento
+                    .replaceFirst("\\s+\\d.*$", "")
+                    .trim();
+
+            boolean citado = Pattern.compile(
+                    "\\b" + Pattern.quote(nomeMedicamento) + "\\b")
+                    .matcher(alertas)
+                    .find();
+
+            if (citado) {
+                throw new RegraDeNegocioException(
+                        "Medicamento recusado: possível alergia ou alerta do paciente.");
+            }
+        }
+
+        itens.add(item);
     }
 
     public void validarParaEmissao() {
-        throw new MissaoPendenteException("E3-2", "Prescrição ainda não implementada. Veja a missão E3-2 em MISSOES.md.");
+
+        if (itens.isEmpty()) {
+            throw new RegraDeNegocioException(
+                    "A prescrição deve conter pelo menos um medicamento.");
+        }
     }
 
-    public Long getAtendimentoId() { return atendimentoId; }
-    public List<Item> getItens() { return List.copyOf(itens); }
+    private static boolean vazio(String texto) {
+        return texto == null || texto.isBlank();
+    }
+
+    private static String normalizar(String texto) {
+        return Normalizer.normalize(texto, Normalizer.Form.NFD)
+                .replaceAll("\\p{M}", "")
+                .toLowerCase(Locale.ROOT)
+                .trim()
+                .replaceAll("\\s+", " ");
+    }
+
+    public Long getAtendimentoId() {
+        return atendimentoId;
+    }
+
+    public List<Item> getItens() {
+        return List.copyOf(itens);
+    }
 }

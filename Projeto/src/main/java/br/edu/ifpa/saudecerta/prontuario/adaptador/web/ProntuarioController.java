@@ -9,7 +9,11 @@ import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RestController;
 
-import br.edu.ifpa.saudecerta.compartilhado.erro.MissaoPendenteException;
+import java.util.List;
+import org.springframework.http.HttpStatus;
+import org.springframework.web.bind.annotation.ResponseStatus;
+import br.edu.ifpa.saudecerta.prontuario.aplicacao.PrescricaoInfo;
+import br.edu.ifpa.saudecerta.prontuario.dominio.Prescricao;
 import br.edu.ifpa.saudecerta.prontuario.aplicacao.AtendimentoInfo;
 import br.edu.ifpa.saudecerta.prontuario.aplicacao.ProntuarioInfo;
 import br.edu.ifpa.saudecerta.prontuario.aplicacao.ProntuarioService;
@@ -58,15 +62,29 @@ public class ProntuarioController {
         return prontuario.finalizar(id, UsuarioAtual.de(token));
     }
 
-    // ---- MISSAO E3-2: prescricoes ----
+       // ---- MISSAO E3-2: prescricoes ----
+
+    public record NovaPrescricao(List<Prescricao.Item> itens) {
+    }
 
     @GetMapping("/api/atendimentos/{id}/prescricoes")
-    public Object prescricoes(@PathVariable Long id) {
-        throw new MissaoPendenteException("E3-2", "Prescrições ainda não implementadas. Veja a missão E3-2 em MISSOES.md.");
+    public List<PrescricaoInfo> prescricoes(
+            @PathVariable Long id,
+            @AuthenticationPrincipal Jwt token) {
+
+        return prontuario.listarPrescricoes(
+                id, UsuarioAtual.de(token));
     }
 
     @PostMapping("/api/atendimentos/{id}/prescricoes")
-    public Object prescrever(@PathVariable Long id) {
-        throw new MissaoPendenteException("E3-2", "Prescrições ainda não implementadas. Veja a missão E3-2 em MISSOES.md.");
+    @ResponseStatus(HttpStatus.CREATED)
+    public PrescricaoInfo prescrever(
+            @PathVariable Long id,
+            @RequestBody NovaPrescricao dados,
+            @AuthenticationPrincipal Jwt token) {
+
+        return prontuario.prescrever(
+                id, dados.itens(), UsuarioAtual.de(token));
     }
+
 }

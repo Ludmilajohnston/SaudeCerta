@@ -21,7 +21,7 @@ Requisito → decisão → componente/tática → como se verifica. Ao concluir 
 | RF13 | Consultar o histórico clínico do paciente | `ProntuarioService.doPaciente` | `FluxoDaClinicaTest.prontuarioRestritoAProfissionais` |
 | RF14 | Consultar a trilha de auditoria | `AuditoriaController`, `AuditoriaService` | `FluxoDaClinicaTest.leituraDeProntuarioEhAuditada` |
 | RF15 | Remarcar consulta sem conflito de horário, preservando sua identidade e registrando a alteração na auditoria | ADR 0007; `Consulta.remarcar`, `AgendaService.remarcar`, `AgendaController`, `ConsultaRepositorioJpa`, `AuditoriaService`, `agenda.js` | `ConsultaTest`; `FluxoDaClinicaTest.remarcaConsultaEAudita`; `FluxoDaClinicaTest.remarcacaoRecusaConflitoProfissional`; `FluxoDaClinicaTest.remarcacaoRecusaConflitoPaciente`; `FluxoDaClinicaTest.remarcaConsultaConfirmada`; teste manual da interface |
-| RF16 | Prescrever medicamentos | missão E3-2 | `PrescricaoTest` (desativado) |
+| RF16 | Prescrever medicamentos | `ProntuarioController`, `ProntuarioService`, `Prescricao`, `PrescricaoRepositorio`, `PrescricaoRepositorioJpa`, `prontuario.js` — missão E3-2 implementada (ADR 0008) | `PrescricaoTest`, `FluxoDaClinicaTest` e testes manuais |
 | RF17 | Relatórios de consultas | missão E3-3 | — |
 | RF18 | Portal do paciente | missão E3-4 | — |
 

@@ -14,6 +14,9 @@ const ACOES = {
   ATENDIMENTO_FINALIZADO: 'Finalizou atendimento',
   PRONTUARIO_LIDO: 'Leu prontuário',
   PRONTUARIO_ALTERADO: 'Alterou prontuário',
+  CONSULTA_REMARCADA: 'Remarcou consulta',
+PRESCRICAO_LIDA: 'Leu prescrição',
+PRESCRICAO_EMITIDA: 'Emitiu prescrição',
 };
 
 let pacienteId = '';

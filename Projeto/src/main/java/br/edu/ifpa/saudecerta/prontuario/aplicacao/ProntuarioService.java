@@ -20,7 +20,8 @@ import br.edu.ifpa.saudecerta.compartilhado.erro.AcessoNegadoException;
 import br.edu.ifpa.saudecerta.compartilhado.erro.RecursoNaoEncontradoException;
 import br.edu.ifpa.saudecerta.prontuario.dominio.Atendimento;
 import br.edu.ifpa.saudecerta.seguranca.api.UsuarioLogado;
-
+import br.edu.ifpa.saudecerta.prontuario.dominio.Prescricao;
+import br.edu.ifpa.saudecerta.compartilhado.erro.RegraDeNegocioException;
 /** Casos de uso do prontuario. Todo acesso passa por aqui e e auditado. */
 @Service
 @Transactional
@@ -31,15 +32,23 @@ public class ProntuarioService {
     private final CadastroFachada cadastro;
     private final Auditoria auditoria;
     private final Clock relogio;
+    private final PrescricaoRepositorio prescricoes;
 
-    public ProntuarioService(AtendimentoRepositorio atendimentos, AgendaFachada agenda, CadastroFachada cadastro,
-            Auditoria auditoria, Clock relogio) {
-        this.atendimentos = atendimentos;
-        this.agenda = agenda;
-        this.cadastro = cadastro;
-        this.auditoria = auditoria;
-        this.relogio = relogio;
-    }
+    public ProntuarioService(
+        AtendimentoRepositorio atendimentos,
+        AgendaFachada agenda,
+        CadastroFachada cadastro,
+        Auditoria auditoria,
+        Clock relogio,
+        PrescricaoRepositorio prescricoes) {
+
+    this.atendimentos = atendimentos;
+    this.agenda = agenda;
+    this.cadastro = cadastro;
+    this.auditoria = auditoria;
+    this.relogio = relogio;
+    this.prescricoes = prescricoes;
+}
 
     /**
      * Abre o atendimento de uma consulta. Se ja existir um atendimento para ela
@@ -109,15 +118,88 @@ public class ProntuarioService {
         return detalhar(a, cadastro.profissional(a.getProfissionalId()).orElse(null));
     }
 
-    private static AtendimentoInfo detalhar(Atendimento a, ProfissionalResumo profissional) {
-        return new AtendimentoInfo(a.getId(), a.getConsultaId(), a.getPacienteId(), a.getProfissionalId(),
-                profissional == null ? "(profissional removido)" : profissional.nome(),
-                profissional == null ? null : profissional.especialidade(), a.getInicio(), a.getFim(),
-                a.getQueixaPrincipal(), a.getEvolucao(), a.getConduta(), a.getStatus().name());
-    }
+    private AtendimentoInfo detalhar(
+        Atendimento a, ProfissionalResumo profissional) {
+
+    return new AtendimentoInfo(
+            a.getId(),
+            a.getConsultaId(),
+            a.getPacienteId(),
+            a.getProfissionalId(),
+            profissional == null
+                    ? "(profissional removido)"
+                    : profissional.nome(),
+            profissional == null
+                    ? null
+                    : profissional.especialidade(),
+            a.getInicio(),
+            a.getFim(),
+            a.getQueixaPrincipal(),
+            a.getEvolucao(),
+            a.getConduta(),
+            a.getStatus().name(),
+            prescricoes.doAtendimento(a.getId())
+                    .stream()
+                    .map(PrescricaoInfo::de)
+                    .toList());
+}
 
     private void auditar(UsuarioLogado quem, String acao, Atendimento atendimento, String detalhe) {
         auditoria.registrar(new EventoDeAuditoria(quem.login(), quem.perfil().name(), acao, "Atendimento",
                 atendimento.getId(), atendimento.getPacienteId(), detalhe));
     }
+    public PrescricaoInfo prescrever(
+        Long id,
+        List<Prescricao.Item> itens,
+        UsuarioLogado quem) {
+
+    Atendimento atendimento = obter(id);
+
+    atendimento.exigirResponsavel(quem.profissionalId());
+
+    if (!atendimento.aberto()) {
+        throw new RegraDeNegocioException(
+                "Atendimento finalizado não permite prescrições.");
+    }
+
+    PacienteResumo paciente = cadastro
+            .paciente(atendimento.getPacienteId())
+            .orElseThrow(() -> new RecursoNaoEncontradoException(
+                    "Paciente não encontrado."));
+
+    Prescricao prescricao = new Prescricao(id);
+
+    if (itens != null) {
+        for (Prescricao.Item item : itens) {
+            prescricao.adicionar(item, paciente.alertas());
+        }
+    }
+
+    prescricao.validarParaEmissao();
+
+    Prescricao salva = prescricoes.salvar(prescricao);
+
+    auditar(quem, "PRESCRICAO_EMITIDA", atendimento,
+            "Prescrição emitida com " + salva.getItens().size()
+                    + " medicamento(s)");
+
+    return PrescricaoInfo.de(salva);
+}
+
+public List<PrescricaoInfo> listarPrescricoes(
+        Long id, UsuarioLogado quem) {
+
+    Atendimento atendimento = obter(id);
+
+    List<PrescricaoInfo> resultado = prescricoes
+            .doAtendimento(id)
+            .stream()
+            .map(PrescricaoInfo::de)
+            .toList();
+
+    auditar(quem, "PRESCRICAO_LIDA", atendimento,
+            "Leitura das prescrições");
+
+    return resultado;
+}
 }
