@@ -24,4 +24,7 @@ public interface ConsultaRepositorio {
 
     /** Todas as consultas entre as duas datas (inclusive). Usado pelos relatorios. */
     List<Consulta> doPeriodo(LocalDate de, LocalDate ate);
+
+    /** Todas as consultas de um paciente, passadas e futuras. Usado pelo portal do paciente. */
+    List<Consulta> doPaciente(Long pacienteId);
 }

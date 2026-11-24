@@ -13,6 +13,9 @@ public interface AgendaFachada {
     /** Consultas entre as duas datas (inclusive), ja com nomes e especialidade. Usado pelos relatorios. */
     List<ConsultaInfo> consultasDoPeriodo(LocalDate de, LocalDate ate);
 
+    /** Consultas de um paciente, passadas e futuras. Usado pelo portal do paciente. */
+    List<ConsultaInfo> consultasDoPaciente(Long pacienteId);
+
     /** CONFIRMADA -> EM_ATENDIMENTO. Chamado pelo prontuario ao abrir o atendimento. */
     void iniciarAtendimento(Long consultaId);
 

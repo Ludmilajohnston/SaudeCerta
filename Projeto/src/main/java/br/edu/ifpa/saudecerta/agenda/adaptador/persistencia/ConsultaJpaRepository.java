@@ -14,4 +14,6 @@ public interface ConsultaJpaRepository extends JpaRepository<ConsultaJpa, Long> 
 
     List<ConsultaJpa> findByPacienteIdAndInicioBetweenOrderByInicio(Long pacienteId, LocalDateTime de,
             LocalDateTime ate);
+
+    List<ConsultaJpa> findByPacienteIdOrderByInicio(Long pacienteId);
 }

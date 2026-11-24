@@ -89,6 +89,29 @@ public class AgendaService implements AgendaFachada {
         return detalhar(List.of(salva)).get(0);
     }
 
+    // ---- Portal do paciente (E3-4) ----
+
+    /** Consultas do paciente logado. O id vem do token, nunca da URL. */
+    @Transactional(readOnly = true)
+    public List<ConsultaDoPortal> minhasConsultas(UsuarioLogado quem) {
+        if (quem.pacienteId() == null) {
+            return List.of();
+        }
+        return paraPortal(consultas.doPaciente(quem.pacienteId()));
+    }
+
+    /** O paciente cancela uma consulta futura sua. Consulta de outro paciente: 404, como se nao existisse. */
+    public ConsultaDoPortal cancelarPeloPaciente(Long consultaId, String motivo, UsuarioLogado quem) {
+        Consulta consulta = consultas.buscarPorId(consultaId)
+                .filter(c -> c.pertenceA(quem.pacienteId()))
+                .orElseThrow(() -> new RecursoNaoEncontradoException("Consulta " + consultaId + " não encontrada."));
+        consulta.cancelarPeloPaciente(motivo, LocalDateTime.now(relogio));
+        Consulta salva = consultas.salvar(consulta);
+        auditar(quem, "CONSULTA_CANCELADA", salva,
+                "Cancelada pelo paciente no portal. Motivo: " + salva.getMotivoCancelamento());
+        return paraPortal(List.of(salva)).get(0);
+    }
+
     /** Remarca uma consulta, verificando conflitos e registrando a auditoria. */
     public ConsultaInfo remarcar(Long id, LocalDateTime novoInicio, UsuarioLogado quem) {
 
@@ -178,6 +201,12 @@ public class AgendaService implements AgendaFachada {
     }
 
     @Override
+    @Transactional(readOnly = true)
+    public List<ConsultaInfo> consultasDoPaciente(Long pacienteId) {
+        return detalhar(consultas.doPaciente(pacienteId));
+    }
+
+    @Override
     public void iniciarAtendimento(Long consultaId) {
         Consulta consulta = obter(consultaId);
         consulta.iniciarAtendimento();
@@ -214,6 +243,23 @@ public class AgendaService implements AgendaFachada {
                             p == null ? null : p.alertas(), c.getProfissionalId(),
                             m == null ? "(profissional removido)" : m.nome(),
                             m == null ? null : m.especialidade(), c.getObservacao(), c.getMotivoCancelamento());
+                })
+                .toList();
+    }
+
+    /** Versao para o portal: so o nome do profissional e a especialidade, sem dados clinicos. */
+    private List<ConsultaDoPortal> paraPortal(List<Consulta> lista) {
+        LocalDateTime agora = LocalDateTime.now(relogio);
+        Map<Long, ProfissionalResumo> profissionais = cadastro
+                .profissionais(lista.stream().map(Consulta::getProfissionalId).collect(Collectors.toSet()));
+        return lista.stream()
+                .sorted(Comparator.comparing(Consulta::getInicio))
+                .map(c -> {
+                    ProfissionalResumo m = profissionais.get(c.getProfissionalId());
+                    return new ConsultaDoPortal(c.getId(), c.getInicio(), c.getDuracaoMinutos(), c.getStatus().name(),
+                            m == null ? "(profissional removido)" : m.nome(),
+                            m == null ? null : m.especialidade(),
+                            c.getMotivoCancelamento(), c.podeSerCanceladaPeloPaciente(agora));
                 })
                 .toList();
     }
