@@ -6,11 +6,10 @@ import java.util.Optional;
 
 import br.edu.ifpa.saudecerta.agenda.dominio.Consulta;
 
-/**
- * PORTA DE SAIDA. A aplicacao diz DO QUE precisa; quem decide COMO (JPA,
- * arquivo, outro servico...) e um adaptador. Repare: nada aqui menciona banco.
- */
 public interface ConsultaRepositorio {
+
+    // E3-5: protege as operacoes de escrita da agenda.
+    void bloquearAgenda();
 
     Consulta salvar(Consulta consulta);
 
@@ -18,13 +17,13 @@ public interface ConsultaRepositorio {
 
     List<Consulta> doDia(LocalDate data);
 
-    List<Consulta> doProfissionalNoDia(Long profissionalId, LocalDate data);
+    List<Consulta> doProfissionalNoDia(
+            Long profissionalId, LocalDate data);
 
-    List<Consulta> doPacienteNoDia(Long pacienteId, LocalDate data);
+    List<Consulta> doPacienteNoDia(
+            Long pacienteId, LocalDate data);
 
-    /** Todas as consultas entre as duas datas (inclusive). Usado pelos relatorios. */
     List<Consulta> doPeriodo(LocalDate de, LocalDate ate);
 
-    /** Todas as consultas de um paciente, passadas e futuras. Usado pelo portal do paciente. */
     List<Consulta> doPaciente(Long pacienteId);
 }

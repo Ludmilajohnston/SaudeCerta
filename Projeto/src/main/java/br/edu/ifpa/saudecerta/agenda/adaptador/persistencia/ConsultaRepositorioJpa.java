@@ -14,11 +14,24 @@ import br.edu.ifpa.saudecerta.agenda.dominio.Consulta;
 @Component
 public class ConsultaRepositorioJpa implements ConsultaRepositorio {
 
-    private final ConsultaJpaRepository jpa;
+   private final ConsultaJpaRepository jpa;
+private final BloqueioAgendaRepository bloqueio;
 
-    public ConsultaRepositorioJpa(ConsultaJpaRepository jpa) {
-        this.jpa = jpa;
-    }
+public ConsultaRepositorioJpa(
+        ConsultaJpaRepository jpa,
+        BloqueioAgendaRepository bloqueio) {
+
+    this.jpa = jpa;
+    this.bloqueio = bloqueio;
+}
+
+@Override
+public void bloquearAgenda() {
+
+    bloqueio.bloquear().orElseThrow(() ->
+            new IllegalStateException(
+                    "Bloqueio da agenda nao inicializado."));
+}
 
     @Override
     public Consulta salvar(Consulta consulta) {

@@ -11,7 +11,7 @@ Requisito → decisão → componente/tática → como se verifica. Ao concluir 
 | RF03 | Manter pacientes (CPF válido e único) | `PacienteController`, `PacienteService`, `Cpf` | `CpfTest`; roteiro, etapa 2 |
 | RF04 | Manter profissionais e especialidades | `ProfissionalController`, `ProfissionalService` | roteiro, etapa 6 |
 | RF05 | Ver a agenda do dia por profissional | `AgendaController`, `AgendaService` | roteiro, etapa 3 |
-| RF06 | Agendar consulta sem conflito de horário | `Consulta.agendar`, `Consulta.conflitaCom`, `AgendaService.agendar` | `ConsultaTest`; `FluxoDaClinicaTest.agendaEDetectaConflito` |
+| RF06 | Agendar consulta sem conflito de horário, inclusive sob concorrência | ADR 0011; `Consulta.agendar`, `Consulta.conflitaCom`, `AgendaService.agendar`, `ConsultaRepositorioJpa`, `BloqueioAgendaRepository` | `ConsultaTest`; `FluxoDaClinicaTest.agendaEDetectaConflito`; `AgendaConcorrenciaTest` |
 | RF07 | Confirmar a chegada do paciente | `Consulta.confirmarChegada` | `ConsultaTest.cicloDeVida` |
 | RF08 | Cancelar consulta com motivo | `Consulta.cancelar` | `ConsultaTest.regrasDeCancelamento` |
 | RF09 | Resumo do dia | `PainelService` | roteiro, etapa 1 |
@@ -20,7 +20,7 @@ Requisito → decisão → componente/tática → como se verifica. Ao concluir 
 | RF12 | Finalizar atendimento, que passa a ser imutável | `Atendimento.finalizar` | `AtendimentoTest.finalizadoEhImutavel` |
 | RF13 | Consultar o histórico clínico do paciente | `ProntuarioService.doPaciente` | `FluxoDaClinicaTest.prontuarioRestritoAProfissionais` |
 | RF14 | Consultar a trilha de auditoria | `AuditoriaController`, `AuditoriaService` | `FluxoDaClinicaTest.leituraDeProntuarioEhAuditada` |
-| RF15 | Remarcar consulta sem conflito de horário, preservando sua identidade e registrando a alteração na auditoria | ADR 0007; `Consulta.remarcar`, `AgendaService.remarcar`, `AgendaController`, `ConsultaRepositorioJpa`, `AuditoriaService`, `agenda.js` | `ConsultaTest`; `FluxoDaClinicaTest.remarcaConsultaEAudita`; `FluxoDaClinicaTest.remarcacaoRecusaConflitoProfissional`; `FluxoDaClinicaTest.remarcacaoRecusaConflitoPaciente`; `FluxoDaClinicaTest.remarcaConsultaConfirmada`; teste manual da interface |
+| RF15 | Remarcar consulta sem conflito de horário, preservando sua identidade e registrando a alteração na auditoria | ADR 0007; ADR 0001; `Consulta.remarcar`, `AgendaService.remarcar`, `AgendaController`, `ConsultaRepositorioJpa`, `AuditoriaService`, `agenda.js` | `ConsultaTest`; `FluxoDaClinicaTest.remarcaConsultaEAudita`; `FluxoDaClinicaTest.remarcacaoRecusaConflitoProfissional`; `FluxoDaClinicaTest.remarcacaoRecusaConflitoPaciente`; `FluxoDaClinicaTest.remarcaConsultaConfirmada`; teste manual da interface |
 | RF16 | Prescrever medicamentos | `ProntuarioController`, `ProntuarioService`, `Prescricao`, `PrescricaoRepositorio`, `PrescricaoRepositorioJpa`, `prontuario.js` — missão E3-2 implementada (ADR 0008) | `PrescricaoTest`, `FluxoDaClinicaTest` e testes manuais |
 | RF17 | Relatórios de consultas | missão E3-3 | — |
 | RF18 | Portal do paciente | missão E3-4 | — |
