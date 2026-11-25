@@ -49,6 +49,8 @@ public class AgendaService implements AgendaFachada {
     }
 
     public ConsultaInfo agendar(NovaConsulta pedido, UsuarioLogado quem) {
+        consultas.bloquearAgenda();
+
         PacienteResumo paciente = cadastro.paciente(pedido.pacienteId()).filter(PacienteResumo::ativo)
                 .orElseThrow(() -> new RegraDeNegocioException("Paciente não encontrado ou inativo."));
         ProfissionalResumo profissional = cadastro.profissional(pedido.profissionalId())
@@ -59,8 +61,6 @@ public class AgendaService implements AgendaFachada {
                 LocalDateTime.now(relogio));
 
         LocalDate dia = nova.getInicio().toLocalDate();
-        // Limitacao conhecida (missao E3-5): duas requisicoes simultaneas podem passar
-        // juntas por esta verificacao. Como voce garantiria a regra no banco?
         if (consultas.doProfissionalNoDia(profissional.id(), dia).stream().anyMatch(nova::conflitaCom)) {
             throw new ConflitoException(profissional.nome() + " já tem consulta nesse horário.");
         }
@@ -74,6 +74,8 @@ public class AgendaService implements AgendaFachada {
     }
 
     public ConsultaInfo confirmarChegada(Long id, UsuarioLogado quem) {
+        consultas.bloquearAgenda();
+
         Consulta consulta = obter(id);
         consulta.confirmarChegada();
         Consulta salva = consultas.salvar(consulta);
@@ -82,6 +84,8 @@ public class AgendaService implements AgendaFachada {
     }
 
     public ConsultaInfo cancelar(Long id, String motivo, UsuarioLogado quem) {
+        consultas.bloquearAgenda();
+
         Consulta consulta = obter(id);
         consulta.cancelar(motivo);
         Consulta salva = consultas.salvar(consulta);
@@ -102,6 +106,8 @@ public class AgendaService implements AgendaFachada {
 
     /** O paciente cancela uma consulta futura sua. Consulta de outro paciente: 404, como se nao existisse. */
     public ConsultaDoPortal cancelarPeloPaciente(Long consultaId, String motivo, UsuarioLogado quem) {
+        consultas.bloquearAgenda();
+
         Consulta consulta = consultas.buscarPorId(consultaId)
                 .filter(c -> c.pertenceA(quem.pacienteId()))
                 .orElseThrow(() -> new RecursoNaoEncontradoException("Consulta " + consultaId + " não encontrada."));
@@ -114,6 +120,8 @@ public class AgendaService implements AgendaFachada {
 
     /** Remarca uma consulta, verificando conflitos e registrando a auditoria. */
     public ConsultaInfo remarcar(Long id, LocalDateTime novoInicio, UsuarioLogado quem) {
+        consultas.bloquearAgenda();
+
 
         Consulta consulta = obter(id);
 
@@ -208,6 +216,8 @@ public class AgendaService implements AgendaFachada {
 
     @Override
     public void iniciarAtendimento(Long consultaId) {
+        consultas.bloquearAgenda();
+
         Consulta consulta = obter(consultaId);
         consulta.iniciarAtendimento();
         consultas.salvar(consulta);
@@ -215,6 +225,8 @@ public class AgendaService implements AgendaFachada {
 
     @Override
     public void concluir(Long consultaId) {
+        consultas.bloquearAgenda();
+
         Consulta consulta = obter(consultaId);
         consulta.concluir();
         consultas.salvar(consulta);
