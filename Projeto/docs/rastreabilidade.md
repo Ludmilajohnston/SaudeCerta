@@ -10,7 +10,7 @@ Requisito → decisão → componente/tática → como se verifica. Ao concluir 
 | RF02 | Acesso conforme o perfil | `SecurityConfig` | `FluxoDaClinicaTest.prontuarioRestritoAProfissionais` |
 | RF03 | Manter pacientes (CPF válido e único) | `PacienteController`, `PacienteService`, `Cpf` | `CpfTest`; roteiro, etapa 2 |
 | RF04 | Manter profissionais e especialidades | `ProfissionalController`, `ProfissionalService` | roteiro, etapa 6 |
-| RF05 | Ver a agenda do dia por profissional | `AgendaController`, `AgendaService` | roteiro, etapa 3 |
+| RNF05 | Regras de negócio testáveis sem infraestrutura | ADR 0002 | Domínio puro; portas e adaptadores; repositórios em memória; Clock fixo | ArquiteturaTest; testes de domínio; AgendaServiceTest; ProntuarioServiceTest; docs/e3-6-testes-sem-banco.md |
 | RF06 | Agendar consulta sem conflito de horário, inclusive sob concorrência | ADR 0011; `Consulta.agendar`, `Consulta.conflitaCom`, `AgendaService.agendar`, `ConsultaRepositorioJpa`, `BloqueioAgendaRepository` | `ConsultaTest`; `FluxoDaClinicaTest.agendaEDetectaConflito`; `AgendaConcorrenciaTest` |
 | RF07 | Confirmar a chegada do paciente | `Consulta.confirmarChegada` | `ConsultaTest.cicloDeVida` |
 | RF08 | Cancelar consulta com motivo | `Consulta.cancelar` | `ConsultaTest.regrasDeCancelamento` |
